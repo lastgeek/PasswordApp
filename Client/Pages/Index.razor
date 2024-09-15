@@ -1,0 +1,104 @@
+﻿@page "/"
+
+<PageTitle>Password Manager</PageTitle>
+
+<MudAppBar Color="Color.Tertiary" Elevation="0" Fixed="false">
+    <MudText Class="d-none d-md-flex" Typo="Typo.h4" Color="Color.Primary"><b>Password Manager</b></MudText>
+    <MudText Class="d-flex d-md-none" Typo="Typo.h4" Color="Color.Primary"><b>PM</b></MudText>
+    <MudSpacer />
+    <MudButton Href="/dashboard" Variant="Variant.Filled" DisableElevation="true" Size="Size.Large" EndIcon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary">Get Started</MudButton>
+</MudAppBar>
+
+<MudGrid>
+    <MudItem xs="12" md="6" Class="d-flex align-content-center flex-wrap flex-grow-1 gap-4">
+        <MudText Typo="Typo.h2" Color="Color.Primary"><b>All your passwords, one place.</b></MudText>
+        <MudItem class="d-flex d-md-none" xs="12" md="6">
+            <MudImage ObjectFit="ObjectFit.Cover" Width="400" Height="400" Src="img/Password_Managers.png" Alt="Password Managers" Class="rounded-lg" />
+        </MudItem>
+        <MudText Typo="Typo.h5" Color="Color.Primary">
+            Ensure the safety of yourself, your family, or your extensive workforce through straightforward security measures, effortless sharing of confidential information, and informative reports for actionable insights.
+        </MudText>
+        <MudButton Href="/dashboard" DisableElevation="true" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary">Get Started</MudButton>
+    </MudItem>
+    <MudItem Class="d-none d-md-flex" xs="12" md="6">
+        <MudImage ObjectFit="ObjectFit.Cover" Width="500" Height="500" Src="img/Password_Managers.png" Alt="Password Managers" Class="rounded-lg" />
+    </MudItem>
+</MudGrid>
+
+<br />
+<br />
+<br />
+<br />
+
+<MudGrid>
+    <MudItem xs="12" class="d-flex align-center justify-center mud-width-full py-8">
+        <MudItem xs="8">
+            <MudText Align="Align.Center" Typo="Typo.h3" Color="Color.Primary"><b>Security isn't just a characteristic. It's the bedrock of everything we do.</b></MudText>
+        </MudItem>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Justify="Justify.Center">
+    <MudItem xs="12" md="4">
+        <MudImage ObjectFit="ObjectFit.Cover" Width="400" Height="172" Src="img/Security_3_Up_Secure_by_design_2x.png" Alt="Secure by design" Class="rounded-lg" />
+        <MudText Typo="Typo.h4" Color="Color.Primary"><b>Secure by design</b></MudText>
+        <MudText Typo="Typo.body1">
+            Enhance your account security by incorporating a Secret Key alongside your password, offering an additional, unique layer of protection for verified security.
+        </MudText>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudImage ObjectFit="ObjectFit.Cover" Width="400" Height="172" Src="img/Security_3_Up_Private_by_default_2x.png" Alt="Private by default" Class="rounded-lg" />
+        <MudText Typo="Typo.h4" Color="Color.Primary"><b>Secure by default</b></MudText>
+        <MudText Typo="Typo.body1">
+            We are unable to access or view passwords or any sensitive data stored within the Password Manager. Consequently, we cannot utilize, distribute, or commercialize this information, and neither can anyone else.
+        </MudText>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudImage ObjectFit="ObjectFit.Cover" Width="400" Height="172" Src="img/Security_3_Up_Verified_by_experts_2x.png" Alt="Verified by experts" Class="rounded-lg" />
+        <MudText Typo="Typo.h4" Color="Color.Primary"><b>Verified by experts</b></MudText>
+        <MudText Typo="Typo.body1">
+            Frequent third-party audits combined with the largest bug bounty program in the industry enable us to swiftly address potential threats before they pose any risk to you.
+        </MudText>
+    </MudItem>
+</MudGrid>
+
+<br />
+<br />
+<br />
+<br />
+
+<MudGrid>
+    <MudItem xs="12" md="6" Class="d-flex align-content-center flex-wrap flex-grow-1 gap-4">
+        <MudText Typo="Typo.h2" Color="Color.Primary">
+            <b>
+                Get started, or get answers
+            </b>
+        </MudText>
+        <MudItem class="d-flex d-md-none" xs="12" md="6">
+            <MudImage ObjectFit="ObjectFit.Cover" Width="400" Height="400" Src="img/Spot_Illustration_Customer_Support.png" Alt="Customer support" Class="rounded-lg" />
+        </MudItem>
+        <MudText Typo="Typo.h5" Color="Color.Primary">
+            Password Manager simplifies managing passwords and sensitive information for everyone. Need help? Our support team is widely regarded in the industry—feel free to ask around.
+        </MudText>
+        <MudButton Href="/dashboard" DisableElevation="true" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary">Get Started</MudButton>
+        <MudButton Href="mailto:telpesov.d@gmail.com" Variant="Variant.Outlined" Color="Color.Primary">I have a question</MudButton>
+    </MudItem>
+    <MudItem class="d-none d-md-flex" xs="12" md="6">
+        <MudImage ObjectFit="ObjectFit.Cover" Width="500" Height="500" Src="img/Spot_Illustration_Customer_Support.png" Alt="Customer support" Class="rounded-lg" />
+    </MudItem>
+</MudGrid>
+
+<br />
+<br />
+<br />
+<br />
+
+<MudAppBar Bottom="true" Fixed="false" Color="Color.Tertiary" Elevation="0">
+    <MudText Typo="Typo.body1" Color="Color.Primary">
+        &copy; 2024 - Password Manager
+    </MudText>
+    <MudSpacer />
+    <MudLink Href="/Privacy">
+        Privacy Policy
+    </MudLink>
+</MudAppBar>

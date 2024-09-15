@@ -1,0 +1,175 @@
+﻿@page "/dashboard"
+@using System.Text.RegularExpressions
+@using System.Text.Json
+@attribute [Authorize]
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>Dashboard</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12">
+        <AuthorizeView>
+            <Authorized>
+                <MudText Color="Color.Primary" Typo="Typo.h3">Welcome to your trunk,</MudText>
+                <MudText Color="Color.Primary" Typo="Typo.h3">
+                    @FormatName(context.User.Identity?.Name)
+                    <MudIconButton Href="authentication/profile" Color="Color.Primary" Size="Size.Large" Icon="@Icons.Material.Filled.ArrowOutward"></MudIconButton>
+                </MudText>
+            </Authorized>
+            <NotAuthorized>
+                <RedirectToLogin/>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudItem>
+    <MudItem lg="10" md="10" sm="10" xs="9">
+        <MudTextField @bind-Value="searchString" Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary" Clearable="true" Variant="Variant.Outlined" Placeholder="Search your entire trunk..." Class="mt-0" Margin="Margin.Dense"></MudTextField>
+    </MudItem>
+    <MudItem class="d-none d-md-flex justify-end flex-grow-1" lg="2" md="2">
+        <MudFab Color="Color.Primary" DisableElevation="true" StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" OnClick="AddNew" Label="tack account" />
+    </MudItem>
+    <MudItem class="d-flex d-md-none" sm="2" xs="3">
+        <MudFab Color="Color.Primary" DisableElevation="true" StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" OnClick="AddNew" Label="tack"/>
+    </MudItem>
+    <MudItem xs="12">
+        <MudChipSet @bind-SelectedChip="selected" Mandatory="true">
+            <MudChip Text="@FormatCategory("All", categoriesCount)" Default="true" Variant="Variant.Text" SelectedColor="Color.Primary"/>
+            @if (categories != null)
+            {
+                foreach (var category in categories)
+                {
+                    <MudChip Text="@FormatCategory(category.Key, category.Value)" Variant="Variant.Text" SelectedColor="Color.Primary"></MudChip>
+                }
+            }
+        </MudChipSet>
+    </MudItem>
+    @if (accounts == null)
+    {
+        <MudItem xs="12">
+            <MudCard Elevation="0" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Width="50px" Height="50px" />
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudSkeleton Width="64px" />
+                        <MudSkeleton Width="132px" Height="30px" />
+                        <MudSkeleton Width="100px" Height="24px" />
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudSkeleton Width="64px" Height="24px" />
+                    </CardHeaderActions>
+                </MudCardHeader>
+            </MudCard>
+        </MudItem>
+    }
+    else
+    {
+        foreach (var account in accounts)
+        {
+            if (FilterFunc(account))
+            {
+                <MudItem xs="12">
+                    <MudCard @onclick="(args) => HandleCardClick(account.Id)" Class="cursor-pointer" Elevation="0" Outlined="true">
+                        <MudCardHeader>
+                            <CardHeaderAvatar>
+                                <ImageComponent ImageUrl="@account.WebsiteUrl" ServiceName="@account.ServiceName"/>
+                            </CardHeaderAvatar>
+                            <CardHeaderContent>
+                                <MudText Color="Color.Primary" Typo="Typo.caption">@account.Category</MudText>
+                                <MudText Color="Color.Primary" Typo="Typo.body1"><b>@account.ServiceName</b></MudText>
+                                <MudText Color="Color.Primary" Typo="Typo.body2">@account.Username</MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudText Color="Color.Primary" Typo="Typo.overline">@account.LastUsed.ToString("MMMM dd")</MudText>
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                    </MudCard>
+                </MudItem>
+            }
+        }
+    }
+</MudGrid>
+
+@code {
+    private string searchString = "";
+    private List<AccountDTO>? accounts;
+    private Dictionary<string, int>? categories;
+    private int categoriesCount = 0;
+
+    MudChip selected;
+
+    protected string FormatName(string text)
+    {
+        string name = Regex.Split(text, @"[^a-zA-Z]")[0];
+        return char.ToUpper(name[0]) + name.Substring(1);
+    }
+
+    protected string FormatCategory(string category, int count)
+    {
+        return $"{category} ({count})";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            accounts = await Http.GetFromJsonAsync<List<AccountDTO>>($"/api/account");
+            categories = accounts.Select(a => a.Category).GroupBy(x => x).ToDictionary(x => x.Key, x => x.Count());
+            categoriesCount = categories.Sum(x => x.Value);
+            await StoreList(categories.Keys.ToList(), "categories");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Zxcvbn.Core.EvaluatePassword("SuperPassword");
+            await base.OnAfterRenderAsync(firstRender);
+        }
+    }
+
+    private async Task StoreList(List<string> myList, string key)
+    {
+        var json = JsonSerializer.Serialize(myList);
+        await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", key, json);
+    }
+
+    private bool FilterFunc(AccountDTO account)
+    {
+        return FilterSearch(account, searchString) && FilterChip(account, selected.Text);
+    }
+
+    private bool FilterChip(AccountDTO account, string searchString)
+    {
+        searchString = searchString.Split(" ").First();
+        if (searchString == "All")
+            return true;
+        if (account.Category.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private bool FilterSearch(AccountDTO account, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (account.ServiceName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (account.Username.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private void AddNew() => Navigation.NavigateTo("/tack-account");
+
+    private void HandleCardClick(string id) => Navigation.NavigateTo("/account/" + id + "/details");
+}

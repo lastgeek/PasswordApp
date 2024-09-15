@@ -1,0 +1,44 @@
+﻿@code {
+    [Parameter]
+    public string ImageUrl { get; set; }
+
+    [Parameter]
+    public string ServiceName { get; set; }
+
+    bool imageLoadFailed;
+
+    void OnImageLoadFailed()
+    {
+        imageLoadFailed = true;
+    }
+
+    protected string FormatText(string name)
+    {
+        if (name.Length > 1)
+        {
+            return name.Substring(0, 2);
+        }
+        return name.Substring(0, 1);
+    }
+
+    protected string FormatLogo(string url)
+    {
+        return $"https://logo.clearbit.com/{url}";
+    }
+}
+
+@if (imageLoadFailed)
+{
+    <MudAvatar Rounded="true" Color="Color.Primary">
+        <MudText><b>@FormatText(ServiceName)</b></MudText>
+    </MudAvatar>
+}
+else
+{
+    <MudAvatar Rounded="true" Color="Color.Primary">
+        <MudText><b>@FormatText(ServiceName)</b></MudText>
+    </MudAvatar>
+@*     <MudAvatar Rounded="true" Color="Color.Tertiary">
+        <MudImage Fluid="true" Src="@FormatLogo(ImageUrl)" Alt="Logo" @onerror="OnImageLoadFailed"></MudImage>
+    </MudAvatar> *@
+}

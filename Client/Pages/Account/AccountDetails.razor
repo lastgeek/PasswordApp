@@ -1,0 +1,129 @@
+﻿@page "/account/{AccountId}/details"
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>@accountTitle</PageTitle>
+
+@if (account != null)
+{
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <MudGrid>
+            <MudItem xs="6" Class="d-flex justify-start flex-grow-1 gap-4">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Href="/dashboard" Size="Size.Large" />
+            </MudItem>
+            <MudItem xs="6" Class="d-flex justify-end flex-grow-1 gap-4">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" OnClick="EditAccount" Color="Color.Primary" Size="Size.Large" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudText Color="Color.Primary" Typo="Typo.h3">@account.ServiceName <MudIconButton Icon="@Icons.Material.Filled.ArrowOutward" Href="@($"https://{account.WebsiteUrl}")" Color="Color.Primary" Size="Size.Large" /></MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudChip Icon="@Icons.Material.Filled.Security" Color="@colorStrength">@textStrength</MudChip>
+            </MudItem>
+            <MudItem xs="12">
+                <MudCard Elevation="0" Outlined="true">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Color="Color.Primary" Typo="Typo.caption"><b>Username or email</b></MudText>
+                            <MudText Color="Color.Primary" Typo="Typo.body1"><b>@account.Username</b></MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" OnClick="@((e)=>
+                                CopyToClipboard(account.Username))" Color="Color.Primary" />
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12">
+                <MudCard Elevation="0" Outlined="true">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Color="Color.Primary" Typo="Typo.caption"><b>Password</b></MudText>
+                            <MudText Color="Color.Primary" Typo="Typo.body1"><b>@HiddenPassword</b></MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" OnClick="@((e)=>
+                                CopyToClipboard(account.Password))" Color="Color.Primary" />
+                            <MudIconButton Icon="@PasswordInputIcon" Color="Color.Primary" OnClick="ShowPassword" />
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.body1" Color="@colorStrength"><MudIcon Color="@colorStrength" Size="Size.Small" Icon="@Icons.Material.Filled.Security" /> <b>@passStrength</b></MudText>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+
+@code {
+    [Parameter]
+    public string AccountId { get; set; }
+
+    private AccountDTO account;
+    private string accountTitle = "Account";
+
+    private bool IsPasswordVisible;
+    private string HiddenPassword = "*";
+    private string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    private Color colorStrength = Color.Primary;
+    private string textStrength = "Unknown";
+    private string passStrength = "Unknown";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            account = await Http.GetFromJsonAsync<AccountDTO>($"/api/account/{AccountId}");
+            accountTitle = account.ServiceName;
+            HiddenPassword = new string('*', account.Password.Length);
+            if (account.PasswordStrength > 3)
+            {
+                textStrength = "This password is secure";
+                passStrength = "Safe";
+                colorStrength = Color.Success;
+            }
+            else
+            {
+                textStrength = "This password is unsecure";
+                passStrength = "Unsafe";
+                colorStrength = Color.Error;
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    async Task CopyToClipboard(string text)
+    {
+        await JSRuntime.InvokeVoidAsync("copyToClipboard", text);
+        Snackbar.Clear();
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomStart;
+        Snackbar.Configuration.SnackbarVariant = Variant.Text;
+        Snackbar.Add("Copied to clipboard", Severity.Normal, config => { config.HideIcon = true; config.ShowCloseIcon = false; });
+    }
+
+    void ShowPassword()
+    {
+        IsPasswordVisible = !IsPasswordVisible;
+        PasswordInputIcon = IsPasswordVisible ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+        HiddenPassword = IsPasswordVisible ? account.Password : new string('*', account.Password.Length);
+    }
+
+    private void EditAccount()
+    {
+        Navigation.NavigateTo("account/" + AccountId + "/edit");
+    }
+}

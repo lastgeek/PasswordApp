@@ -1,0 +1,36 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="Theme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+
+<MudLayout>
+    <MudContainer>
+        @Body
+    </MudContainer>
+    <MudScrollToTop>
+        <MudFab Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.KeyboardArrowUp"/>
+    </MudScrollToTop>
+</MudLayout>
+
+@code {
+    private MudTheme Theme = new MudTheme()
+        {
+            Palette = new PaletteLight()
+            {
+                Primary = Colors.Shades.Black,
+                Secondary = Colors.Blue.Darken4,
+                Tertiary = Colors.Shades.White,
+                Success = Colors.LightGreen.Accent4,
+                Error = Colors.Red.Accent4
+            },
+            Typography = new Typography()
+            {
+                Default = new Default()
+                {
+                    FontFamily = new[] { "Plus Jakarta Sans", "Roboto", "Helvetica", "Arial", "sans-serif" }
+                }
+            }
+        };
+}

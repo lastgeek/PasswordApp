@@ -1,0 +1,199 @@
+﻿@page "/account/{AccountId}/edit"
+@using System.Text.Json
+@using Zxcvbn
+@using PasswordGenerator
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+@inject HttpClient Http
+
+<PageTitle>Edit account</PageTitle>
+
+@if (account != null)
+{
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <MudGrid>
+            <MudItem xs="6" Class="d-flex justify-start flex-grow-1 gap-4">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" OnClick="CancelEdit" Size="Size.Large" />
+            </MudItem>
+            <MudItem xs="6" Class="d-flex justify-end flex-grow-1 gap-4">
+                <MudIconButton Icon="@Icons.Material.Filled.Done" Color="Color.Primary" Disabled="@(!isFormValid)" OnClick="Submit" Size="Size.Large" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudText Color="Color.Primary" Typo="Typo.h3">Edit account</MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudForm @bind-IsValid="isFormValid">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Label="Service name" Required="true" RequiredError="Service name is required!" @bind-Value="account.ServiceName" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Label="Website url" Required="true" RequiredError="Website url is required!" @bind-Value="account.WebsiteUrl" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Label="Username" Required="true" RequiredError="Username is required!" @bind-Value="account.Username" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Immediate="true" TextChanged="OnPasswordChanged" Label="Password" Required="true" RequiredError="Password is required!" @bind-Value="account.Password"
+                                          InputType="@PasswordInput" Adornment="Adornment.End" AdornmentColor="Color.Primary" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="ShowPassword" AdornmentAriaLabel="Show Password" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudProgressLinear Rounded="true" Color="Color.Secondary" Value="@account.PasswordStrength" Max="5" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudAutocomplete Variant="Variant.Outlined" T="string" Label="Category" Required="true" RequiredError="Category is required!" @bind-Value="account.Category" SearchFunc="@Search"
+                                             CoerceValue="true" />
+                        </MudItem>
+                        <MudItem xs="6" Class="d-flex justify-start flex-grow-1 gap-4">
+                            <MudButton Variant="Variant.Filled" Color="Color.Error" DisableElevation="true" OnClick="ToggleDialog">Delete account</MudButton>
+                        </MudItem>
+                        <MudItem xs="6" Class="d-flex justify-end flex-grow-1 gap-4">
+                            <MudButton OnClick="GeneratePassword" Variant="Variant.Filled" Color="Color.Primary">Generate Password</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+
+    <MudDialog @bind-IsVisible="visible" Options="new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall }">
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                Delete
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudText>Do you really want to delete the account? This process cannot be undone.</MudText>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="ToggleDialog">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="Delete" Class="px-10">Delete</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+
+@code {
+    [Parameter]
+    public string AccountId { get; set; }
+    private List<string>? categories;
+
+    private AccountDTO account = new AccountDTO();
+
+    private bool visible;
+    private void ToggleDialog() => visible = !visible;
+
+    bool isFormValid = true;
+
+    bool isShow;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    protected override async Task OnInitializedAsync()
+    {
+        account = await Http.GetFromJsonAsync<AccountDTO>($"/api/account/{AccountId}");
+        categories = await RetrieveList("categories");
+        await base.OnInitializedAsync();
+    }
+
+    private async Task<List<string>> RetrieveList(string key)
+    {
+        var json = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", key);
+
+        if (json != null)
+        {
+            return JsonSerializer.Deserialize<List<string>>(json);
+        }
+        else
+        {
+            return new List<string>();
+        }
+    }
+
+    private void OnPasswordChanged(string password)
+    {
+        if (!string.IsNullOrEmpty(password))
+        {
+            account.PasswordStrength = Zxcvbn.Core.EvaluatePassword(password).Score + 1;
+        }
+        else
+        {
+            account.PasswordStrength = 0;
+        }
+    }
+
+    private async Task<IEnumerable<string>> Search(string value)
+    {
+        await Task.Delay(5);
+
+        if (string.IsNullOrEmpty(value))
+            return categories;
+        return categories.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    private void ShowPassword()
+    {
+        isShow = !isShow;
+        PasswordInputIcon = isShow ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+        PasswordInput = isShow ? InputType.Text : InputType.Password;
+    }
+
+    private void CancelEdit() => Navigation.NavigateTo("account/" + AccountId + "/details");
+
+    private void GeneratePassword()
+    {
+        var pwd = new Password(16);
+        account.Password = pwd.Next();
+    }
+
+    private async Task Delete()
+    {
+        var result = await this.Http.DeleteAsync($"api/account/{AccountId}");
+
+        if (result.IsSuccessStatusCode)
+        {
+            Snackbar.Add("Account has been deleted.", Severity.Success);
+
+            await Task.Delay(1000);
+            Navigation.NavigateTo("/dashboard");
+        }
+        else
+        {
+            Snackbar.Add("Error! " + result.Content.ToString(), Severity.Error);
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (!isFormValid) return;
+
+        EditAccountDTO editAccount = new EditAccountDTO
+        {
+            ServiceName = account.ServiceName,
+            WebsiteUrl = account.WebsiteUrl,
+            Username = account.Username,
+            Password = account.Password,
+            PasswordStrength = account.PasswordStrength,
+            Category = account.Category
+        };
+
+        var response = await Http.PutAsJsonAsync($"/api/account/{AccountId}", editAccount);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Snackbar.Add("Account has been updated.", Severity.Success);
+
+            await Task.Delay(1000);
+            CancelEdit();
+        }
+        else
+        {
+            Snackbar.Add("Error! " + response.Content.ToString(), Severity.Error);
+        }
+    }
+}

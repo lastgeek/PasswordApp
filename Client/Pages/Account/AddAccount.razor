@@ -1,0 +1,179 @@
+﻿@page "/tack-account"
+@using System.Text.Json
+@using System.Text
+@using System.Net.Http.Headers
+@using PasswordGenerator
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+@inject HttpClient Http
+
+<PageTitle>Tack account</PageTitle>
+
+@if (account != null)
+{
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <MudGrid>
+            <MudItem xs="6" Class="d-flex justify-start flex-grow-1 gap-4">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" OnClick="CancelAdd" Size="Size.Large" />
+            </MudItem>
+            <MudItem xs="6" Class="d-flex justify-end flex-grow-1 gap-4">
+                <MudIconButton Icon="@Icons.Material.Filled.Done" Disabled="@(!isFormValid)" Color="Color.Primary" OnClick="Submit" Size="Size.Large" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudText Color="Color.Primary" Typo="Typo.h3">Tack account</MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudForm @bind-IsValid="isFormValid">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Label="Service name" Required="true" RequiredError="Service name is required!" @bind-Value="account.ServiceName" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" HelperText="e.g.: facebook.com" Label="Website" Required="true" RequiredError="Website is required!" @bind-Value="account.WebsiteUrl" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Label="Username" Required="true" RequiredError="Username is required!" @bind-Value="account.Username" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Label="Password" Immediate="true" TextChanged="OnPasswordChanged" Required="true" RequiredError="Password is required!" @bind-Value="account.Password"
+                                          InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" AdornmentColor="Color.Primary" OnAdornmentClick="ShowPassword" AdornmentAriaLabel="Show Password" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudProgressLinear Rounded="true" Color="Color.Secondary" Value="@account.PasswordStrength" Max="5" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudAutocomplete Variant="Variant.Outlined" T="string" Label="Category" Required="true" RequiredError="Category is required!" @bind-Value="account.Category" SearchFunc="@Search"
+                                             CoerceValue="true" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudButton OnClick="GeneratePassword" Variant="Variant.Filled" Color="Color.Primary">Generate Password</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+
+@code {
+    [Parameter]
+    public string AccountId { get; set; }
+
+    private AccountDTO account = new AccountDTO();
+    private List<string>? categories;
+
+    bool isFormValid;
+
+    bool isShow;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    private async Task<List<string>> RetrieveList(string key)
+    {
+        var json = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", key);
+
+        if (json != null)
+        {
+            return JsonSerializer.Deserialize<List<string>>(json);
+        }
+        else
+        {
+            return new List<string>();
+        }
+    }
+
+    private void ShowPassword()
+    {
+        isShow = !isShow;
+        PasswordInputIcon = isShow ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+        PasswordInput = isShow ? InputType.Text : InputType.Password;
+    }
+
+    private void GeneratePassword()
+    {
+        var pwd = new Password(16);
+        account.Password = pwd.Next();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categories = await RetrieveList("categories");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    private async Task<string> GetCsrfToken()
+    {
+        var response = await Http.GetAsync("/api/csrf");
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync();
+    }
+
+    private async Task<IEnumerable<string>> Search(string value)
+    {
+        await Task.Delay(5);
+
+        if (string.IsNullOrEmpty(value))
+            return categories;
+        return categories.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    private void OnPasswordChanged(string password)
+    {
+        if (!string.IsNullOrEmpty(password))
+        {
+            account.PasswordStrength = Zxcvbn.Core.EvaluatePassword(password).Score + 1;
+        }
+        else
+        {
+            account.PasswordStrength = 0;
+        }
+    }
+
+    private async Task<int> PasswordStrength(string password)
+    {
+        return await Task.Run(() =>
+        {
+            var strength = Zxcvbn.Core.EvaluatePassword(password);
+            return strength.Score;
+        });
+    }
+
+    private void CancelAdd() => Navigation.NavigateTo("/dashboard");
+
+    private async Task Submit()
+    {
+        if (!isFormValid) return;
+
+        var сsrfToken = await GetCsrfToken();
+        Http.DefaultRequestHeaders.Remove("RequestVerificationToken");
+        Http.DefaultRequestHeaders.Add("RequestVerificationToken", сsrfToken);
+
+        var response = await Http.PostAsJsonAsync("/api/account", account);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Snackbar.Add("Account has been added.", Severity.Success);
+
+            await Task.Delay(1000);
+            CancelAdd();
+        }
+        else
+        {
+            Snackbar.Add("Error! " + response.Content.ToString(), Severity.Error);
+        }
+    }
+}
